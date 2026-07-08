@@ -32,11 +32,6 @@
   ],
   "reminders": [
     {
-      "id": "02_default_shahada",
-      "path": "downloads/reminders",
-      "file": "02_default_shahada.m4a"
-    },
-    {
       "id": "03_default_7ay3alaSalah",
       "path": "downloads/reminders",
       "file": "03_default_7ay3alaSalah.m4a"
