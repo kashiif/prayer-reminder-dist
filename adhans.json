@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "adhans": [
+    {
+      "id": "haramayn/01",
+      "label": "Haramayn Adhan - Style 1",
+      "hasFajr": true,
+      "path": "downloads/adhans/haramayn/01",
+      "files": ["debut.ogg", "milieu.ogg", "fajr.ogg", "fin.ogg"]
+    },
+    {
+      "id": "haramayn/02",
+      "label": "Haramayn Adhan - Style 2",
+      "hasFajr": true,
+      "path": "downloads/adhans/haramayn/02",
+      "files": ["debut.ogg", "milieu.ogg", "fajr.ogg", "fin.ogg"]
+    },
+    {
+      "id": "maghrebi/01",
+      "label": "Maghrebi Adhan - Style 1",
+      "hasFajr": true,
+      "path": "downloads/adhans/maghrebi/01",
+      "files": ["debut.ogg", "milieu.ogg", "fajr.ogg", "fin.ogg"]
+    },
+    {
+      "id": "maghrebi/02",
+      "label": "Maghrebi Adhan - Style 2",
+      "hasFajr": true,
+      "path": "downloads/adhans/maghrebi/02",
+      "files": ["debut.ogg", "milieu.ogg", "fajr.ogg", "fin.ogg"]
+    }
+  ]
+}
