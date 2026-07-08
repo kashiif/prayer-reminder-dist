@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 #
-# Generates adhans.json (repo root) by scanning downloads/adhans for valid adhan
-# "leaf" directories. A leaf directory is valid when it contains the three core
-# segments debut/milieu/fin (fajr is optional and marks a Fajr-capable adhan).
+# Generates adhans.json (repo root) with two sections:
 #
-# Each entry's label comes from the directory's meta.json ({"label": "..."}); if
-# that's missing the label is derived from the path. Segment files must use the
-# canonical names debut.ogg / milieu.ogg / fajr.ogg / fin.ogg — the app downloads
-# them by those names, so non-canonical files are reported and skipped.
+#   * "adhans"    — scanned from downloads/adhans for valid adhan "leaf" directories.
+#                   A leaf directory is valid when it contains the three core segments
+#                   debut/milieu/fin (fajr is optional and marks a Fajr-capable adhan).
+#                   Each entry's label comes from the directory's meta.json
+#                   ({"label": "..."}); if missing, it's derived from the path. Segment
+#                   files must use the canonical names debut.ogg / milieu.ogg /
+#                   fajr.ogg / fin.ogg — non-canonical files are reported and skipped.
+#
+#   * "reminders" — scanned from downloads/reminders for single audio files. Each entry
+#                   is { id, path, file } where id is the file name without extension.
+#                   The app derives a readable label from the file name at runtime.
 #
 # Usage: scripts/generate-manifest.sh
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 adhans_dir="$repo_root/downloads/adhans"
+reminders_dir="$repo_root/downloads/reminders"
 out="$repo_root/adhans.json"
 
 if [ ! -d "$adhans_dir" ]; then
@@ -95,13 +101,47 @@ $entry"
   count=$((count+1))
 done < <(find "$adhans_dir" -type d | sort)
 
+# --- Reminders: single audio files directly under downloads/reminders ---------------
+reminder_entries=""
+reminder_count=0
+
+if [ -d "$reminders_dir" ]; then
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+    base="$(basename "$file")"
+    case "$base" in
+      *.ogg|*.mp3|*.wav|*.m4a|*.aac|*.flac|*.opus) ;;
+      *) continue ;;
+    esac
+    id="${base%.*}"
+    entry=$(cat <<EOF
+    {
+      "id": "$(json_escape "$id")",
+      "path": "downloads/reminders",
+      "file": "$(json_escape "$base")"
+    }
+EOF
+)
+    if [ -n "$reminder_entries" ]; then
+      reminder_entries="$reminder_entries,
+$entry"
+    else
+      reminder_entries="$entry"
+    fi
+    reminder_count=$((reminder_count+1))
+  done < <(find "$reminders_dir" -maxdepth 1 -type f | sort)
+fi
+
 {
   echo "{"
   echo "  \"version\": 1,"
   echo "  \"adhans\": ["
-  printf '%s\n' "$entries"
+  [ -n "$entries" ] && printf '%s\n' "$entries"
+  echo "  ],"
+  echo "  \"reminders\": ["
+  [ -n "$reminder_entries" ] && printf '%s\n' "$reminder_entries"
   echo "  ]"
   echo "}"
 } > "$out"
 
-echo "Wrote $out ($count adhan(s), $warnings warning(s))"
+echo "Wrote $out ($count adhan(s), $reminder_count reminder(s), $warnings warning(s))"
