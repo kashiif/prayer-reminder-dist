@@ -35,6 +35,21 @@ read_label() {
   sed -n 's/.*"label"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$meta" | head -n1
 }
 
+# Best-effort duration probe in milliseconds (empty string if unknown).
+duration_ms() {
+  local file="$1"
+  [ -f "$file" ] || { printf ''; return; }
+  if command -v afinfo >/dev/null 2>&1; then
+    local seconds
+    seconds="$(afinfo "$file" 2>/dev/null | awk '/estimated duration:/ { print $3; exit }')"
+    if [ -n "$seconds" ]; then
+      awk -v s="$seconds" 'BEGIN { printf "%.0f", s * 1000 }'
+      return
+    fi
+  fi
+  printf ''
+}
+
 # Title-cases a slug like "haramayn/01" into a readable fallback label.
 derive_label() {
   local id="$1"
@@ -72,11 +87,27 @@ while IFS= read -r dir; do
 
   files='"debut.ogg", "milieu.ogg"'
   has_fajr=false
+  total_duration=0
+  has_duration=true
+  seg_duration="$(duration_ms "$dir/debut.ogg")"
+  if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
+  seg_duration="$(duration_ms "$dir/milieu.ogg")"
+  if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
   if [ -f "$dir/fajr.ogg" ]; then
     files="$files, \"fajr.ogg\""
     has_fajr=true
+    seg_duration="$(duration_ms "$dir/fajr.ogg")"
+    if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
   fi
   files="$files, \"fin.ogg\""
+  seg_duration="$(duration_ms "$dir/fin.ogg")"
+  if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
+  if [ "$has_duration" = true ]; then
+    duration_line=",
+      \"durationMs\": $total_duration"
+  else
+    duration_line=""
+  fi
 
   label="$(read_label "$dir/meta.json")"
   [ -n "$label" ] || label="$(derive_label "$id")"
@@ -86,7 +117,7 @@ while IFS= read -r dir; do
     {
       "id": "$id",
       "label": "$label",
-      "hasFajr": $has_fajr,
+      "hasFajr": $has_fajr$duration_line,
       "path": "downloads/adhans/$id",
       "files": [$files]
     }
@@ -114,11 +145,18 @@ if [ -d "$reminders_dir" ]; then
       *) continue ;;
     esac
     id="${base%.*}"
+    reminder_duration="$(duration_ms "$file")"
+    if [ -n "$reminder_duration" ]; then
+      duration_field=",
+      \"durationMs\": $reminder_duration"
+    else
+      duration_field=""
+    fi
     entry=$(cat <<EOF
     {
       "id": "$(json_escape "$id")",
       "path": "downloads/reminders",
-      "file": "$(json_escape "$base")"
+      "file": "$(json_escape "$base")"$duration_field
     }
 EOF
 )
