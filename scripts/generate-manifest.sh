@@ -3,8 +3,11 @@
 # Generates adhans.json (repo root) with two sections:
 #
 #   * "adhans"    — scanned from downloads/adhans for valid adhan "leaf" directories.
-#                   A leaf directory is valid when it contains the three core segments
-#                   debut/milieu/fin (fajr is optional and marks a Fajr-capable adhan).
+#                   A leaf directory is valid when it either:
+#                     - contains the three core segments debut/milieu/fin (fajr is
+#                       optional and marks a Fajr-capable adhan), OR
+#                     - contains a single complete recording named adhan.<ext> (a
+#                       single-file adhan; never Fajr-eligible).
 #                   Each entry's label comes from the directory's meta.json
 #                   ({"label": "..."}); if missing, it's derived from the path. Segment
 #                   files must use the canonical names debut.ogg / milieu.ogg /
@@ -71,49 +74,49 @@ warnings=0
 # Find leaf directories (deepest dirs) under downloads/adhans, sorted for stable output.
 while IFS= read -r dir; do
   [ -d "$dir" ] || continue
-  # Only consider directories that directly contain segment files.
-  [ -f "$dir/debut.ogg" ] && [ -f "$dir/milieu.ogg" ] && [ -f "$dir/fin.ogg" ] || continue
 
   id="${dir#"$adhans_dir/"}"
 
-  # Warn about non-canonical audio files so they can be fixed.
-  for f in "$dir"/*.ogg; do
-    b="$(basename "$f")"
-    case "$b" in
-      debut.ogg|milieu.ogg|fajr.ogg|fin.ogg) ;;
-      *) echo "warning: $id has non-canonical segment '$b' (ignored)" >&2; warnings=$((warnings+1)) ;;
-    esac
-  done
+  if [ -f "$dir/debut.ogg" ] && [ -f "$dir/milieu.ogg" ] && [ -f "$dir/fin.ogg" ]; then
+    # --- Multi-segment adhan (debut/milieu/fin[/fajr]) --------------------------------
+    # Warn about non-canonical audio files so they can be fixed.
+    for f in "$dir"/*.ogg; do
+      b="$(basename "$f")"
+      case "$b" in
+        debut.ogg|milieu.ogg|fajr.ogg|fin.ogg) ;;
+        *) echo "warning: $id has non-canonical segment '$b' (ignored)" >&2; warnings=$((warnings+1)) ;;
+      esac
+    done
 
-  files='"debut.ogg", "milieu.ogg"'
-  has_fajr=false
-  total_duration=0
-  has_duration=true
-  seg_duration="$(duration_ms "$dir/debut.ogg")"
-  if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
-  seg_duration="$(duration_ms "$dir/milieu.ogg")"
-  if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
-  if [ -f "$dir/fajr.ogg" ]; then
-    files="$files, \"fajr.ogg\""
-    has_fajr=true
-    seg_duration="$(duration_ms "$dir/fajr.ogg")"
+    files='"debut.ogg", "milieu.ogg"'
+    has_fajr=false
+    total_duration=0
+    has_duration=true
+    seg_duration="$(duration_ms "$dir/debut.ogg")"
     if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
-  fi
-  files="$files, \"fin.ogg\""
-  seg_duration="$(duration_ms "$dir/fin.ogg")"
-  if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
-  if [ "$has_duration" = true ]; then
-    duration_line=",
+    seg_duration="$(duration_ms "$dir/milieu.ogg")"
+    if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
+    if [ -f "$dir/fajr.ogg" ]; then
+      files="$files, \"fajr.ogg\""
+      has_fajr=true
+      seg_duration="$(duration_ms "$dir/fajr.ogg")"
+      if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
+    fi
+    files="$files, \"fin.ogg\""
+    seg_duration="$(duration_ms "$dir/fin.ogg")"
+    if [ -n "$seg_duration" ]; then total_duration=$((total_duration + seg_duration)); else has_duration=false; fi
+    if [ "$has_duration" = true ]; then
+      duration_line=",
       \"durationMs\": $total_duration"
-  else
-    duration_line=""
-  fi
+    else
+      duration_line=""
+    fi
 
-  label="$(read_label "$dir/meta.json")"
-  [ -n "$label" ] || label="$(derive_label "$id")"
-  label="$(json_escape "$label")"
+    label="$(read_label "$dir/meta.json")"
+    [ -n "$label" ] || label="$(derive_label "$id")"
+    label="$(json_escape "$label")"
 
-  entry=$(cat <<EOF
+    entry=$(cat <<EOF
     {
       "id": "$id",
       "label": "$label",
@@ -123,6 +126,35 @@ while IFS= read -r dir; do
     }
 EOF
 )
+  else
+    # --- Single-file adhan (one complete recording named adhan.<ext>) -----------------
+    full_file=""
+    for ext in ogg mp3 wav m4a aac flac opus; do
+      if [ -f "$dir/adhan.$ext" ]; then full_file="adhan.$ext"; break; fi
+    done
+    [ -n "$full_file" ] || continue
+
+    duration_line=""
+    seg_duration="$(duration_ms "$dir/$full_file")"
+    [ -n "$seg_duration" ] && duration_line=",
+      \"durationMs\": $seg_duration"
+
+    label="$(read_label "$dir/meta.json")"
+    [ -n "$label" ] || label="$(basename "$dir")"
+    label="$(json_escape "$label")"
+
+    entry=$(cat <<EOF
+    {
+      "id": "$id",
+      "label": "$label",
+      "hasFajr": false$duration_line,
+      "path": "downloads/adhans/$id",
+      "files": ["$full_file"]
+    }
+EOF
+)
+  fi
+
   if [ -n "$entries" ]; then
     entries="$entries,
 $entry"

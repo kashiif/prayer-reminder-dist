@@ -2,6 +2,22 @@
   "version": 1,
   "adhans": [
     {
+      "id": "ali_mulla",
+      "label": "Makkah (Ali Mulla)",
+      "hasFajr": false,
+      "durationMs": 258009,
+      "path": "downloads/adhans/ali_mulla",
+      "files": ["adhan.ogg"]
+    },
+    {
+      "id": "beautiful",
+      "label": "Beautiful Azan",
+      "hasFajr": false,
+      "durationMs": 129000,
+      "path": "downloads/adhans/beautiful",
+      "files": ["adhan.ogg"]
+    },
+    {
       "id": "haramayn/01",
       "label": "Makkah Adhan",
       "hasFajr": true,
@@ -32,6 +48,38 @@
       "durationMs": 159906,
       "path": "downloads/adhans/maghrebi/02",
       "files": ["debut.ogg", "milieu.ogg", "fajr.ogg", "fin.ogg"]
+    },
+    {
+      "id": "marwan_qassas",
+      "label": "Madina (Marwan Qassas)",
+      "hasFajr": false,
+      "durationMs": 228241,
+      "path": "downloads/adhans/marwan_qassas",
+      "files": ["adhan.ogg"]
+    },
+    {
+      "id": "mohamed_tarek",
+      "label": "Mohamed Tarek",
+      "hasFajr": false,
+      "durationMs": 151000,
+      "path": "downloads/adhans/mohamed_tarek",
+      "files": ["adhan.ogg"]
+    },
+    {
+      "id": "omar_hisham",
+      "label": "Omar Hisham Al Arabi",
+      "hasFajr": false,
+      "durationMs": 179920,
+      "path": "downloads/adhans/omar_hisham",
+      "files": ["adhan.ogg"]
+    },
+    {
+      "id": "soulful",
+      "label": "Soulful Azan",
+      "hasFajr": false,
+      "durationMs": 178817,
+      "path": "downloads/adhans/soulful",
+      "files": ["adhan.ogg"]
     }
   ],
   "reminders": [
